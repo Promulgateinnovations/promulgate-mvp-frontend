@@ -1,118 +1,132 @@
 {% include '/admin/tab_bar.html' %}
 <div class="admin_content active">
-    <div class="row content_header">
-        <div class="col-6">
-            <h1 class="title">
-                <i class="fa fa-link"></i> Connections
-            </h1>
-        </div>
-    </div>
-    <div class="content_body">
-        <div class="row">
-            {% if organization_connections %}
-            <div class="row">
-                <div class="organization_connections">
-                    <div class="form-group">
-                        {% for connection_type, connections in organization_connections %}
-                        <div class="connections_listing">
-                            <div class="title_block">
-                                <label class="form-label title">
-                                    {{ organization_connections_titles[connection_type] }}
-                                </label>
-                            </div>
-                            <div class="connections_settings">
-                                {% for connection_sub_type, sub_type in connections %}
-                                <div class="form-check">
-                                    <div>
-                                        <label class="form-check-label" for="connection_{{ sub_type.unique_name }}">
-                                            {{ sub_type.name }}
-                                        </label>
-                                        {% if sub_type.name == "LinkedIn" %}
-                                        <p class="pageName">
-                                            {% if linkedInProfileName %}
-                                            <strong>{{ linkedInProfileName }}</strong> -
-                                            {% endif %}
-                                            {% if linkedInPages is not empty %}
-                                            {% for page in linkedInPages %}
-                                            <strong>{{ page.name }}</strong><br>
-                                            {% endfor %}
-                                            {% else %}
-                                            <strong>No Pages Found</strong>
-                                            {% endif %}
-                                        </p>
-                                        {% else %}
-                                        {% if configured_connections[sub_type.unique_name]['pageName'] and configured_connections[sub_type.unique_name]['isConfigured'] %}
-                                        <p class="pageName">
-                                            {{ configured_connections[sub_type.unique_name]['pageName'] }}
-                                        </p>
-                                        {% endif %}
-                                        {% endif %}
-                                    </div>
+	<div class="row content_header">
+		<div class="col-6">
+			<h1 class="title">
+				<i class="fa fa-link"></i> Connections
+			</h1>
+		</div>
+	</div>
+	<div class="content_body">
+		<div class="row">
+			{% if organization_connections %}
+			<!--
+						<form class="needs-validation" action="{{ form_action }}" novalidate data-custom_errors_container="form-error-messages-block">
+			-->
+			<div class="row">
+				<div class="organization_connections">
+					<div class="form-group">
+						{% for connection_type, connections in organization_connections %}
+						<div class="connections_listing">
+							<div class="title_block">
+								<label class="form-label title">
+									{{ organization_connections_titles[connection_type] }}
+								</label>
+							</div>
+							<div class="connections_settings">
+								{% for connection_sub_type, sub_type in connections %}
+								<div class="form-check">
+									<div>
+										<label class="form-check-label" for="connection_{{ sub_type.unique_name }}">
+											{{ sub_type.name }}
+										</label>
+										{% if configured_connections[sub_type.unique_name]['pageName'] and
+										configured_connections[sub_type.unique_name]['isConfigured'] %}
+										<p class="pageName">
+											{% if sub_type.name == 'WhatsApp' %}
+											<a href="{{ url('connect_whatsapp') }}" target="_blank">{{
+												organization_name }} </a>
+											{% elseif sub_type.name == 'Google Reviews' %}
+											<a href="{{ url('connect_google_reviews') }}" target="_blank">{{
+												configured_connections[sub_type.unique_name]['pageName'] }} </a>
+											{% else %}
+											{{ configured_connections[sub_type.unique_name]['pageName'] }}
+											{% endif %}
+										</p>
 
-                                    <div class="settings">
-                                        {% set is_already_configured = configured_connections[sub_type.unique_name]['isConfigured'] %}
-                                        {% set is_already_enabled = (configured_connections[sub_type.unique_name]['status'] == 'Active') %}
+										{% endif %}
+									</div>
 
-                                        <a class="btn btn-sm info-btn" href="javascript:void(0);" onclick="showPopup('{{ sub_type.name }}')">
-                                            <i class="fa fa-info-circle"></i>
-                                        </a>
+									<div class="settings">
 
-                                        <div class="toggle-switch">
-                                            <input type="checkbox" name="organization_connection_config[]"
-                                                id="connection_{{ sub_type.unique_name }}_config"
-                                                value="{{ sub_type.unique_name }}_config"
-                                                class="organization_connection_configuration"
-                                                data-api_connection="{{ supported_api_connections[sub_type.unique_name]['status'] }}"
-                                                data-api_custom_callback="{{ supported_api_connections[sub_type.unique_name]['js_callback_function'] }}"
-                                                data-oauth_authorization_url_constant="{{ supported_api_connections[sub_type.unique_name]['oauth_authorization_url_constant'] }}"
-                                                data-connection_setting_id="connection_{{ sub_type.unique_name }}"
-                                                data-connection_setting_name="{{ sub_type.name }}"
-                                                data-connection_media_type="{{ sub_type.type }}"
-                                                data-social_media_connection_id="{{ configured_connections[sub_type.unique_name]['socialMediaConnectionId'] }}"
-                                                {% if is_already_configured %} checked {% endif %}
-                                                data-toggle="toggle" data-onstyle="success"
-                                                data-offstyle="outline-danger" data-size="xs" data-width="120px"
-                                                data-on="Connected <i class='fa fa-chain'></i>"
-                                                data-off="Connect <i class='fa fa-chain-broken'></i>">
-                                        </div>
+										{% set is_already_configured =
+										configured_connections[sub_type.unique_name]['isConfigured'] %}
+										{% set is_already_enabled =
+										(configured_connections[sub_type.unique_name]['status'] == 'Active') %}
 
-                                        <div class="toggle-switch">
-                                            <input type="checkbox" {% if not is_already_configured %} disabled {% endif %}
-                                                {% if is_already_enabled %} checked {% endif %}
-                                                name="organization_connections[]"
-                                                id="connection_{{ sub_type.unique_name }}" value="{{ sub_type.name }}"
-                                                class="organization_connection_active_toggle"
-                                                data-social_media_connection_id="{{ configured_connections[sub_type.unique_name]['socialMediaConnectionId'] }}"
-                                                data-toggle="toggle" data-offstyle="danger"
-                                                data-onstyle="promulgate-primary" data-style="border" data-size="xs"
-                                                data-width="100px" data-off="Disabled <i class='fa fa-pause'></i>"
-                                                data-on="Enabled <i class='fa fa-play'></i>">
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            <div class="row">
-                <div class="form-error-messages-block"></div>
-            </div>
-            {% else %}
-            <div class="row mt-5">
-                <div class="text-center">
-                    <h3 class="page-data-needed-block animate__animated animate__pulse">Please create organization for
-                        adding some connections</h3>
-                    <h5 class="mt-5">
-                        <a href="{{ url('admin_organization') }}" class="btn btn-promulgate-secondary">
-                            Create Organization
-                        </a>
-                    </h5>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+										<div class="toggle-switch">
+											<input type="checkbox" name="organization_connection_config[]"
+												id="connection_{{ sub_type.unique_name }}_config"
+												value="{{ sub_type.unique_name }}_config"
+												class="organization_connection_configuration"
+												data-api_connection="{{supported_api_connections[sub_type.unique_name]['status']}}"
+												data-api_custom_callback="{{supported_api_connections[sub_type.unique_name]['js_callback_function']}}"
+												data-oauth_authorization_url_constant="{{supported_api_connections[sub_type.unique_name]['oauth_authorization_url_constant']}}"
+												data-connection_setting_id="connection_{{ sub_type.unique_name }}"
+												data-connection_setting_name="{{ sub_type.name }}"
+												data-connection_media_type="{{ sub_type.type }}"
+												data-social_media_connection_id="{{ configured_connections[sub_type.unique_name]['socialMediaConnectionId'] }}"
+												{% if is_already_configured %} checked {% endif %} {% if
+												(sub_type.name=='WhatsApp' ) and (is_already_configured==1) %} disabled
+												{% endif %} {% if (sub_type.name=='Reddit' ) or
+												(sub_type.name=='Twitter' ) or (sub_type.name=='E-Mail' ) or
+												(sub_type.name=='SMS' ) or (sub_type.name=='Google Reviews' ) or
+												(sub_type.name=='Facebook Ads' ) or (sub_type.name=='Twitter promotions'
+												) %} disabled {% endif %} data-toggle="toggle" data-onstyle="success"
+												data-offstyle="outline-danger" data-size="xs" data-width="120px"
+												data-on="Connected <i class='fa fa-chain'></i>"
+												data-off="Connect <i class='fa fa-chain-broken'></i>">
+
+										</div>
+										<div class="toggle-switch">
+											<input type="checkbox" {% if not is_already_configured %} disabled {% endif
+												%} {% if is_already_enabled %} checked {% endif %}
+												name="organization_connections[]"
+												id="connection_{{ sub_type.unique_name }}" value="{{ sub_type.name }}"
+												data-connection_setting_name="{{ sub_type.name }}"
+												class="organization_connection_active_toggle"
+												data-social_media_connection_id="{{ configured_connections[sub_type.unique_name]['socialMediaConnectionId'] }}"
+												data-toggle="toggle" data-offstyle="danger"
+												data-onstyle="promulgate-primary" data-style="border" data-size="xs"
+												data-width="100px" data-off="Disabled <i class='fa fa-pause'></i>"
+												data-on="Enabled <i class='fa fa-play'></i>">
+										</div>
+
+									</div>
+
+								</div>
+
+
+								{% endfor %}
+							</div>
+						</div>
+						{% endfor %}
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="form-error-messages-block"></div>
+			</div>
+			<!--				<div class="row">-->
+			<!--					<div class="text-center">-->
+			<!--						<button class="btn btn-min btn-promulgate-primary" type="submit">Save</button>-->
+			<!--						<button class="btn btn-min btn-outline-danger" type="reset">Ignore Changes</button>-->
+			<!--					</div>-->
+			<!--				</div>-->
+			<!--</form>-->
+			{% else %}
+			<div class="row mt-5">
+				<div class="text-center">
+					<h3 class="page-data-needed-block animate__animated animate__pulse">Please create organization for
+						adding some connections</h3>
+					<h5 class="mt-5">
+						<a href="{{ url('admin_organization') }}" class="btn btn-promulgate-secondary">
+							Create Organization
+						</a>
+					</h5>
+				</div>
+			</div>
+			{% endif %}
+		</div>
+	</div>
 </div>
