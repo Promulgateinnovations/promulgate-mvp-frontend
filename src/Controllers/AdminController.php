@@ -289,7 +289,6 @@ class AdminController extends BaseController
 
 	public function showConnections()
 	{
-
 		$this->Breadcrumbs->add([
 			'title' => 'Connections',
 			'url'   => url('admin_connections'),
@@ -302,21 +301,41 @@ class AdminController extends BaseController
 			$organization_connections = getValue('connections', $organization_connections['data'], []);
 		}
 
-		$CampaignController     = new CampaignController([
+		$CampaignController = new CampaignController([
 			'context' => 'data',
 		]);
 		$configured_connections = $CampaignController->getSocialMediaConnections(true);
 
-		$final_organization_connections        = [];
+		// Ensure LinkedIn page names are included in configured_connections
+		foreach ($configured_connections as $key => $connection) {
+			if (strpos($key, 'linkedin') !== false && $connection['isConfigured']) {
+				// Fetch LinkedIn page details if not already present
+				if (!isset($connection['pageName'])) {
+					try {
+						$LinkedInClient = new \LinkedIn\Client(env('LINKEDIN_CLIENT_ID'), env('LINKEDIN_CLIENT_SECRET'));
+						$LinkedInClient->setAccessToken($connection['accessToken']);
+						
+						// Fetch organization details
+						$organizationId = $connection['organizationId'] ?? null;
+						if ($organizationId) {
+							$organization = $LinkedInClient->get('organizations/' . $organizationId);
+							$configured_connections[$key]['pageName'] = $organization['localizedName'] ?? '';
+						}
+					} catch (\Exception $e) {
+						// Handle error silently or log it
+						$configured_connections[$key]['pageName'] = '';
+					}
+				}
+			}
+		}
+
+		$final_organization_connections = [];
 		$final_organization_connections_titles = [];
 
 		if($organization_connections) {
-
 			foreach($organization_connections as $connection) {
-
-				$unique_name   = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $connection['name']));
-				$final_organization_connections[$connection['type']]
-				[$unique_name] = [
+				$unique_name = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $connection['name']));
+				$final_organization_connections[$connection['type']][$unique_name] = [
 					'name'        => $connection['name'],
 					'unique_name' => $unique_name,
 					'id'          => $connection['id'] ?? 0,
@@ -328,53 +347,52 @@ class AdminController extends BaseController
 			$final_organization_connections = [
 				'ORGANIC' => $final_organization_connections['ORGANIC'] ?? [],
 				'PAID'    => $final_organization_connections['PAID'] ?? [],
-				#'SOCIAL'  => $final_organization_connections['SOCIAL'] ?? [],
 			];
 
 			$final_organization_connections_titles = [
 				'ORGANIC' => "Organic",
-				#'SOCIAL'  => "Social",
 				'PAID'    => "Paid",
 			];
 		}
 
-		
-	 	$LinkedInClient = new \LinkedIn\Client(env('LINKEDIN_CLIENT_ID'), env('LINKEDIN_CLIENT_SECRET'));
-
+		$LinkedInClient = new \LinkedIn\Client(env('LINKEDIN_CLIENT_ID'), env('LINKEDIN_CLIENT_SECRET'));
 		$LinkedInClient->setRedirectUrl(getAbsoluteUrl('oauth_linkedin_callback', NULL, [
 			'source' => 'connection',
 		], [
-			'NO_DEBUG' => false,
+			'NO_DEBUG' => true,
 		]));
 
-			// P($final_organization_connections);
-		//Saving state in session & validate once we receive authorization code for security
+		// Saving state in session & validate once we receive authorization code for security
 		Session::set('linkedin_oauth_state', $LinkedInClient->getState());
 
-
-		$this->setViewData('connections.html',
-			[
-				'form_action'                     => url('admin_ajax'),
-				'page_title'                      => "Admin Connections",
-				'organization_connections'        => $final_organization_connections,
-				'organization_connections_titles' => $final_organization_connections_titles,
-				'supported_api_connections'       => Config::API_CONFIGURATION_CONNECTIONS,
-				'configured_connections'          => $configured_connections,
-				'plugins_google_youtube'          => true,
-				'plugins_facebook'                => true,
-				'plugins_linkedin'                 => true,
-				'facebook_app_id'                 => env('FACEBOOK_APP_ID'),
-				'facebook_app_client_id'          => env('FACEBOOK_CLIENT_ID'),
-				'facebook_app_client_secret'      => env('FACEBOOK_CLIENT_SECRET'),
-				'facebook_graph_api_version'      => env('FACEBOOK_GRAPH_API_VERSION'),
-				'GOOGLE_OAUTH_CLIENT_ID'          => env('GOOGLE_OAUTH_CLIENT_ID'),
-				'GOOGLE_YOUTUBE_API_KEY'          => env('GOOGLE_YOUTUBE_API_KEY'),
-				'linkedin_oauth_authorization_url' => $LinkedInClient->getLoginUrl(['r_emailaddress', 'r_liteprofile', 'w_member_social', 'rw_organization_admin', 'r_organization_social', 'w_organization_social', 'w_member_social', 'r_1st_connections_size']),
-				//'linkedin_oauth_authorization_url' => [],
-				'CONNECTION_OAUTH_STATUS'          => json_encode(Session::pull('CONNECTION_OAUTH_STATUS') ?? []),
-				'organization_name'                => $this->adminModel->getOrganizationDetails($this->organizationId)['body']['data']['name'] ?? '',
-				]
-		);
+		$this->setViewData('connections.html', [
+			'form_action'                     => url('admin_ajax'),
+			'page_title'                      => "Admin Connections",
+			'organization_connections'        => $final_organization_connections,
+			'organization_connections_titles' => $final_organization_connections_titles,
+			'supported_api_connections'       => Config::API_CONFIGURATION_CONNECTIONS,
+			'configured_connections'          => $configured_connections,
+			'plugins_google_youtube'          => true,
+			'plugins_facebook'                => true,
+			'plugins_linkedin'                => true,
+			'facebook_app_id'                 => env('FACEBOOK_APP_ID'),
+			'facebook_app_client_id'          => env('FACEBOOK_CLIENT_ID'),
+			'facebook_app_client_secret'      => env('FACEBOOK_CLIENT_SECRET'),
+			'facebook_graph_api_version'      => env('FACEBOOK_GRAPH_API_VERSION'),
+			'GOOGLE_OAUTH_CLIENT_ID'          => env('GOOGLE_OAUTH_CLIENT_ID'),
+			'GOOGLE_YOUTUBE_API_KEY'          => env('GOOGLE_YOUTUBE_API_KEY'),
+			'linkedin_oauth_authorization_url' => $LinkedInClient->getLoginUrl([
+				'r_emailaddress',
+				'r_liteprofile',
+				'w_member_social',
+				'rw_organization_admin',
+				'r_organization_social',
+				'w_organization_social',
+				'w_member_social',
+				'r_1st_connections_size'
+			]),
+			'CONNECTION_OAUTH_STATUS'          => json_encode(Session::pull('CONNECTION_OAUTH_STATUS') ?? []),
+		]);
 	}
 
 
