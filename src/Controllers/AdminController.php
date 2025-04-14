@@ -355,12 +355,18 @@ class AdminController extends BaseController
 			];
 		}
 
-		$LinkedInClient = new \LinkedIn\Client(env('LINKEDIN_CLIENT_ID'), env('LINKEDIN_CLIENT_SECRET'));
-		$LinkedInClient->setRedirectUrl(getAbsoluteUrl('oauth_linkedin_callback', NULL, [
+		$linkedInRedirectUrl = getAbsoluteUrl('oauth_linkedin_callback', NULL, [
 			'source' => 'connection',
 		], [
 			'NO_DEBUG' => true,
-		]));
+		]);
+
+		// added this for local only, server will always have http/https
+		if (!str_contains($linkedInRedirectUrl, 'http')) { 
+			$linkedInRedirectUrl = 'http://'.$linkedInRedirectUrl;
+		}
+		$LinkedInClient = new \LinkedIn\Client(env('LINKEDIN_CLIENT_ID'), env('LINKEDIN_CLIENT_SECRET'));
+		$LinkedInClient->setRedirectUrl($linkedInRedirectUrl);
 
 		// Saving state in session & validate once we receive authorization code for security
 		Session::set('linkedin_oauth_state', $LinkedInClient->getState());
