@@ -480,7 +480,7 @@ $(document).ready(function () {
       }).then((result) => {
         if (result.isConfirmed) {
           if (connection_selector == "#connection_whatsapp") {
-            window.open("/admin/connect-whatsapp", "_blank").focus();
+            window.open("/admin/connect-whatsapp", "_self").focus();
             return false;
           } else if (connection_selector == "#connection_google_reviews") {
             window.open("/admin/connect-google-reviews", "_blank").focus();

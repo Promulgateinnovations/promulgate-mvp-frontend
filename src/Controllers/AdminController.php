@@ -722,6 +722,15 @@ class AdminController extends BaseController
 			]);
 
 		} else {
+			$connection_config_input = [
+				'name' => 'WhatsApp',
+				'isConfigured' => true,
+				'status' => 'Active',
+				'orgId' => Session::get('organization', 'id'),
+
+			];
+			
+			$this->adminModel->updateConnectionConfiguration($connection_config_input)['body'];
 
 			//Update company name
 			Session::set('whatsapp_connection_id', [
@@ -733,6 +742,7 @@ class AdminController extends BaseController
 				'data'   =>
 					[
 						'message' => "Whatsapp Connection details updated successfully",
+						'extra'   => [ 'next_screen' => url('admin_connections') ]
 					],
 			]);
 
